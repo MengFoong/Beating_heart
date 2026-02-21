@@ -53,7 +53,7 @@
     const CENTER_Y = CANVAS_HEIGHT / 2;
     const IMAGE_ENLARGE = 11;
     const HEART_COLOR = "#FF69B4";
-    const GENERATE_FRAMES = 20;
+    const GENERATE_FRAMES = 120;
 
     const canvas = document.getElementById("heartCanvas");
     const ctx = canvas.getContext("2d");
@@ -123,9 +123,9 @@
     const allFrames = {};
 
     for (let frame = 0; frame < GENERATE_FRAMES; frame++) {
-        const ratio = 10 * curve(frame / 10 * Math.PI);
-        const haloRadius = Math.floor(4 + 6 * (1 + curve(frame / 10 * Math.PI)));
-        const haloNumber = Math.floor(3000 + 4000 * Math.abs(curve(frame / 10 * Math.PI) ** 2));
+        const ratio = 10 * curve(frame / 25 * Math.PI);
+        const haloRadius = Math.floor(4 + 6 * (1 + curve(frame / 25 * Math.PI)));
+        const haloNumber = Math.floor(3000 + 4000 * Math.abs(curve(frame / 25 * Math.PI) ** 2));
 
         const framePoints = [];
 
@@ -183,7 +183,7 @@
         }
 
         currentFrame++;
-        setTimeout(render, 160);
+        setTimeout(render, 60);
     }
 
     render();
