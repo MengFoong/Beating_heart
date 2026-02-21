@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>for my bb xiaowen</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            background: #000;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            overflow: hidden;
+        }
+        canvas { display: block; }
+        .text-overlay {
+            position: absolute;
+            top: 10%;
+            left: 50%;
+            transform: translateX(-50%);
+            color: #FF69B4;
+            font-size: 24px;
+            font-family: 'Georgia', serif;
+            text-align: center;
+            pointer-events: none;
+            text-shadow: 0 0 10px rgba(255, 105, 180, 0.5);
+        }
+        .text-center {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: #FF69B4;
+            font-size: 16px;
+            font-family: 'Georgia', serif;
+            text-align: center;
+            pointer-events: none;
+            text-shadow: 0 0 8px rgba(255, 105, 180, 0.5);
+        }
+    </style>
+</head>
+<body>
+    <canvas id="heartCanvas"></canvas>
+    <div class="text-overlay">for my bb xiaowen</div>
+    <div class="text-center">from mengmeng</div>
+
+    <script>
+    const CANVAS_WIDTH = 640;
+    const CANVAS_HEIGHT = 480;
+    const CENTER_X = CANVAS_WIDTH / 2;
+    const CENTER_Y = CANVAS_HEIGHT / 2;
+    const IMAGE_ENLARGE = 11;
+    const HEART_COLOR = "#FF69B4";
+    const GENERATE_FRAMES = 20;
+
+    const canvas = document.getElementById("heartCanvas");
+    const ctx = canvas.getContext("2d");
+    canvas.width = CANVAS_WIDTH;
+    canvas.height = CANVAS_HEIGHT;
+
+    function heartFunction(t, shrinkRatio = IMAGE_ENLARGE) {
+        const x = 16 * Math.pow(Math.sin(t), 3);
+        const y = -(13 * Math.cos(t) - 5 * Math.cos(2 * t) - 2 * Math.cos(3 * t) - Math.cos(4 * t));
+        return [
+            Math.round(x * shrinkRatio + CENTER_X),
+            Math.round(y * shrinkRatio + CENTER_Y)
+        ];
+    }
+
+    function scatterInside(x, y, beta = 0.15) {
+        const ratioX = -beta * Math.log(Math.random());
+        const ratioY = -beta * Math.log(Math.random());
+        const dx = ratioX * (x - CENTER_X);
+        const dy = ratioY * (y - CENTER_Y);
+        return [x - dx, y - dy];
+    }
+
+    function shrink(x, y, ratio) {
+        const force = -1 / Math.pow((x - CENTER_X) ** 2 + (y - CENTER_Y) ** 2, 0.6);
+        const dx = ratio * force * (x - CENTER_X);
+        const dy = ratio * force * (y - CENTER_Y);
+        return [x - dx, y - dy];
+    }
+
+    function curve(p) {
+        return 2 * (2 * Math.sin(4 * p)) / (2 * Math.PI);
+    }
+
+    // Build heart points
+    const points = [];
+    const edgeDiffusionPoints = [];
+    const centerDiffusionPoints = [];
+
+    // Generate base heart points
+    for (let i = 0; i < 2000; i++) {
+        const t = Math.random() * 2 * Math.PI;
+        points.push(heartFunction(t));
+    }
+
+    // Edge diffusion
+    for (const [px, py] of points) {
+        for (let j = 0; j < 3; j++) {
+            edgeDiffusionPoints.push(scatterInside(px, py, 0.05));
+        }
+    }
+
+    // Center diffusion
+    for (let i = 0; i < 6000; i++) {
+        const [px, py] = points[Math.floor(Math.random() * points.length)];
+        centerDiffusionPoints.push(scatterInside(px, py, 0.17));
+    }
+
+    // Pre-calculate frames
+    function calcPosition(x, y, ratio) {
+        const force = 1 / Math.pow((x - CENTER_X) ** 2 + (y - CENTER_Y) ** 2, 0.520);
+        const dx = ratio * force * (x - CENTER_X) + (Math.random() * 3 - 1.5 | 0);
+        const dy = ratio * force * (y - CENTER_Y) + (Math.random() * 3 - 1.5 | 0);
+        return [x - dx, y - dy];
+    }
+
+    const allFrames = {};
+
+    for (let frame = 0; frame < GENERATE_FRAMES; frame++) {
+        const ratio = 10 * curve(frame / 10 * Math.PI);
+        const haloRadius = Math.floor(4 + 6 * (1 + curve(frame / 10 * Math.PI)));
+        const haloNumber = Math.floor(3000 + 4000 * Math.abs(curve(frame / 10 * Math.PI) ** 2));
+
+        const framePoints = [];
+
+        // Halo
+        const haloSet = new Set();
+        for (let i = 0; i < haloNumber; i++) {
+            const t = Math.random() * 4 * Math.PI;
+            let [x, y] = heartFunction(t, 11.5);
+            [x, y] = shrink(x, y, haloRadius);
+            const key = `${Math.round(x)},${Math.round(y)}`;
+            if (!haloSet.has(key)) {
+                haloSet.add(key);
+                const nx = x + (Math.random() * 29 - 14 | 0);
+                const ny = y + (Math.random() * 29 - 14 | 0);
+                const size = [1, 2, 2][Math.floor(Math.random() * 3)];
+                framePoints.push([nx, ny, size]);
+            }
+        }
+
+        // Outline
+        for (const [px, py] of points) {
+            const [x, y] = calcPosition(px, py, ratio);
+            const size = Math.floor(Math.random() * 3) + 1;
+            framePoints.push([x, y, size]);
+        }
+
+        // Edge diffusion
+        for (const [px, py] of edgeDiffusionPoints) {
+            const [x, y] = calcPosition(px, py, ratio);
+            const size = Math.floor(Math.random() * 2) + 1;
+            framePoints.push([x, y, size]);
+        }
+
+        // Center diffusion
+        for (const [px, py] of centerDiffusionPoints) {
+            const [x, y] = calcPosition(px, py, ratio);
+            const size = Math.floor(Math.random() * 2) + 1;
+            framePoints.push([x, y, size]);
+        }
+
+        allFrames[frame] = framePoints;
+    }
+
+    // Animation loop
+    let currentFrame = 0;
+
+    function render() {
+        ctx.fillStyle = "#000";
+        ctx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+
+        ctx.fillStyle = HEART_COLOR;
+        const frameData = allFrames[currentFrame % GENERATE_FRAMES];
+        for (const [x, y, size] of frameData) {
+            ctx.fillRect(x, y, size, size);
+        }
+
+        currentFrame++;
+        setTimeout(render, 160);
+    }
+
+    render();
+    </script>
+</body>
+</html>
